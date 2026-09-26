@@ -4,7 +4,10 @@ Three daily checkpoints, check-in emails with Done/Missed buttons, and one recor
 
 ## How it works
 
-- **Dashboard** (`/`): mark items, edit commitments, see your scorecard. Password-protected.
+- **Dashboard** (`/`): mark items, see a calendar of what's due, edit commitments, and check your scorecard. Password-protected.
+- **Statuses**: Done, Missed or Bypass. Missed and Bypass require a reason. Bypasses don't hurt your score, but they stay on the record.
+- **Parts**: split a commitment into pieces (e.g. "I walked" and "Dog walked"), each with its own buttons.
+- **One-time items**: goals and deadlines on a specific date. They show by name on the calendar.
 - **Checkpoint emails**: GitHub Actions pings `/api/cron` every 30 minutes. The app sends each checkpoint's email once per day, only if something is still open.
 - **Email buttons** open a confirm page. Nothing is written until you tap, because mail scanners prefetch links. Missed requires a reason.
 - **Claude reads** `GET /api/state?token=READ_TOKEN` (read-only).

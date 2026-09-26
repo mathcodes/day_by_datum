@@ -1,7 +1,7 @@
 import { verify } from '../lib/sign.js';
 import { getState, markEntry } from '../lib/store.js';
 import { page, esc } from '../lib/page.js';
-import { localNow, fmtDate } from '../lib/time.js';
+import { localNow, fmtDate, unitTitle } from '../lib/time.js';
 
 // Email buttons land here.
 // GET only shows a confirm screen. Mail scanners prefetch links, so a GET never writes.
@@ -17,19 +17,18 @@ export default async function handler(req, res) {
   }
   try {
     const state = await getState();
-    const c = state.commitments.find((x) => x.id === tok.i);
-    const title = c ? c.title : 'That commitment was deleted';
+    const title = unitTitle(state, tok.i);
     const existing = (state.log[tok.d] || {})[tok.i];
-    const missed = tok.s === 'missed';
+    const needsWhy = tok.s === 'missed' || tok.s === 'bypassed';
 
     if (req.method === 'POST') {
       const why = String(req.body?.why || '').trim();
-      if (missed && !why) return res.status(400).send(form(t, title, tok, existing, 'Give a reason. That is the deal.'));
+      if (needsWhy && !why) return res.status(400).send(form(t, title, tok, existing, 'Give a reason. That is the deal.'));
       const now = localNow(state.settings.tz);
-      await markEntry(tok.d, tok.i, missed ? { s: 'missed', why, at: now.hhmm, via: 'email' } : { s: 'done', at: now.hhmm, via: 'email' });
-      return res.send(page('Logged', `<h1>${missed ? 'Miss logged' : 'Logged as done'}</h1>
+      await markEntry(tok.d, tok.i, needsWhy ? { s: tok.s, why, at: now.hhmm, via: 'email' } : { s: 'done', at: now.hhmm, via: 'email' });
+      return res.send(page('Logged', `<h1>${{ missed: 'Miss logged', bypassed: 'Bypass logged', done: 'Logged as done' }[tok.s]}</h1>
         <p><b>${esc(title)}</b><br><span class="muted">${fmtDate(tok.d)}</span></p>
-        ${missed ? `<div class="card">${esc(why)}</div>` : ''}
+        ${needsWhy ? `<div class="card">${esc(why)}</div>` : ''}
         <a class="btn plain" href="/">Open the dashboard</a>`));
     }
     return res.send(form(t, title, tok, existing, ''));
@@ -38,15 +37,20 @@ export default async function handler(req, res) {
   }
 }
 
+const COPY = {
+  done: { h: 'Confirm done', btn: 'Confirm done', cls: 'done' },
+  missed: { h: 'Log a miss', btn: 'Log miss', cls: 'miss', q: 'Why did you miss it?' },
+  bypassed: { h: 'Bypass it', btn: 'Log bypass', cls: 'plain', q: 'Why bypass it? Bypasses stay on your record.' },
+};
 function form(t, title, tok, existing, err) {
-  const missed = tok.s === 'missed';
-  const already = existing ? `<p class="muted">Already marked ${existing.s} at ${esc(existing.at || '')}. Submitting replaces it.</p>` : '';
-  return page(missed ? 'Log a miss' : 'Confirm done', `<h1>${missed ? 'Log a miss' : 'Confirm done'}</h1>
+  const k = COPY[tok.s] || COPY.done;
+  const already = existing ? `<p class="muted">Already marked ${esc(existing.s)} at ${esc(existing.at || '')}. Submitting replaces it.</p>` : '';
+  return page(k.h, `<h1>${k.h}</h1>
     <p><b>${esc(title)}</b><br><span class="muted">${fmtDate(tok.d)}</span></p>${already}
     <form method="post" action="/api/mark">
       <input type="hidden" name="t" value="${esc(t)}">
-      ${missed ? `<label for="why">Why did you miss it?</label><textarea id="why" name="why" required placeholder="Be specific."></textarea>` : ''}
+      ${k.q ? `<label for="why">${k.q}</label><textarea id="why" name="why" required placeholder="Be specific."></textarea>` : ''}
       ${err ? `<p class="err">${esc(err)}</p>` : ''}
-      <button class="${missed ? 'miss' : 'done'}" type="submit">${missed ? 'Log miss' : 'Confirm done'}</button>
+      <button class="${k.cls}" type="submit">${k.btn}</button>
     </form>`);
 }
