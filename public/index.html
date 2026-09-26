@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Day by Datum</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#EDF0F4;--card:#FFFFFF;--ink:#16203A;--muted:#5B6479;--line:#D6DBE4;
+  --amber:#F2A900;--amber-soft:#FFF4D6;--done:#2E7D5B;--done-soft:#E6F3EC;--miss:#B8322A;--miss-soft:#FBEAE8;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1524;--card:#18213A;--ink:#E8ECF4;--muted:#9AA3B8;--line:#2A3553;
+  --amber:#F2B632;--amber-soft:#3A2E0A;--done:#4CB387;--done-soft:#12291F;--miss:#E8665C;--miss-soft:#2E1719;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0F1524;--card:#18213A;--ink:#E8ECF4;--muted:#9AA3B8;--line:#2A3553;
+  --amber:#F2B632;--amber-soft:#3A2E0A;--done:#4CB387;--done-soft:#12291F;--miss:#E8665C;--miss-soft:#2E1719;color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);-webkit-text-size-adjust:100%}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 120px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.date{font-family:var(--display);font-weight:600;font-size:1.3rem}
+.tabs{display:flex;gap:3px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs button{font:inherit;font-size:.9rem;font-weight:700;border:0;background:transparent;color:var(--muted);padding:7px 11px;border-radius:7px;cursor:pointer}
+.tabs button[aria-current="page"]{background:var(--ink);color:var(--bg)}
+.hero{margin:22px 0 6px}
+.hero-time{font-family:var(--display);font-weight:700;font-size:clamp(3.6rem,17vw,5.6rem);line-height:.88}
+.hero-label{font-size:1.05rem;color:var(--muted);margin-top:6px}
+.track{position:relative;height:50px;margin:20px 6px 4px}
+.track-line,.track-fill{position:absolute;left:0;top:12px;height:6px;border-radius:3px}
+.track-line{right:0;background:var(--line)}
+.track-fill{background:var(--ink);opacity:.35}
+.tick{position:absolute;top:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);white-space:nowrap}
+.tick i{display:block;width:18px;height:18px;border-radius:50%;background:var(--card);border:3px solid var(--ink)}
+.tick.passed i{background:var(--ink)}
+.tick.late i{border-color:var(--miss);background:var(--miss)}
+.tick.late span{color:var(--miss);font-weight:700}
+.now{position:absolute;top:2px;width:3px;height:26px;border-radius:2px;background:var(--amber);transform:translateX(-50%)}
+.stats{display:flex;gap:18px;flex-wrap:wrap;font-weight:700;font-size:1.05rem}
+.bad-text{color:var(--miss)}
+.notice{background:var(--amber-soft);border-left:4px solid var(--amber);padding:12px 14px;border-radius:6px;margin:16px 0 0}
+.notice p{margin:0}
+.notice p+p{margin-top:6px}
+.link{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+.slot{margin-top:28px}
+.slot-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 8px}
+.slot-head h2{font-family:var(--display);font-weight:600;font-size:1.55rem;margin:0}
+.slot-head span{font-size:.9rem;color:var(--muted)}
+.slot-head span.bad-text{color:var(--miss);font-weight:700}
+.items{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.item{display:grid;grid-template-columns:1fr auto;gap:10px 12px;padding:14px;border-top:1px solid var(--line);border-left:5px solid transparent;align-items:center}
+.item:first-child{border-top:0}
+.item.done{border-left-color:var(--done);background:var(--done-soft)}
+.item.missed{border-left-color:var(--miss);background:var(--miss-soft)}
+.item.overdue{border-left-color:var(--amber)}
+.item-title{font-weight:700;display:block}
+.item-meta{font-size:.85rem;color:var(--muted)}
+.late-tag{color:var(--miss);font-weight:700}
+.item-actions{display:flex;gap:6px}
+.btn{font:inherit;font-weight:700;font-size:.9rem;padding:9px 13px;min-height:42px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}
+.b-done[aria-pressed="true"]{background:var(--done);border-color:var(--done);color:#fff}
+.b-miss[aria-pressed="true"]{background:var(--miss);border-color:var(--miss);color:#fff}
+.b-primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.b-danger{color:var(--miss);border-color:var(--miss)}
+.btn-wide{width:100%;margin-top:14px}
+.why{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:700}
+input,select{font:inherit;padding:10px 12px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);width:100%;min-height:44px}
+input.need{border-color:var(--miss)}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.sec{font-family:var(--display);font-weight:600;font-size:1.55rem;margin:28px 0 10px}
+.big{font-family:var(--display);font-weight:700;font-size:clamp(3.4rem,15vw,5rem);line-height:.9;margin-top:22px}
+.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:14px}
+.cell{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.75rem;line-height:1.15;background:var(--card);border:1px solid var(--line)}
+.cell b{font-size:1rem}
+.cell.full{background:var(--done);border-color:var(--done);color:#fff}
+.cell.part{background:var(--amber-soft);border-color:var(--amber)}
+.cell.low{background:var(--miss);border-color:var(--miss);color:#fff}
+.cell.none{opacity:.35}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.misses{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.misses li{padding:12px 14px;border-top:1px solid var(--line)}
+.misses li:first-child{border-top:0}
+.clist{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.crow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.crow:first-child{border-top:0}
+.cps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field>span{font-weight:700;font-size:.85rem}
+.form{background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:16px;display:grid;gap:12px;margin-top:16px}
+.form .sec{margin:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;flex-wrap:wrap}
+.error-line{color:var(--miss);font-weight:700;margin:0}
+.foot{margin-top:36px;font-size:.85rem;color:var(--muted)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--ink);color:var(--bg);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:5}
+.bar-in{max-width:608px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.btn-save{background:var(--amber);border-color:var(--amber);color:#1B1400;padding:10px 22px}
+.toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:var(--done);color:#fff;padding:8px 18px;border-radius:20px;font-weight:700;z-index:10}
+@media (max-width:430px){
+  .item{grid-template-columns:1fr}
+  .item-actions .btn{flex:1}
+  .cps,.row2{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.login{max-width:380px;margin:12vh auto 0;padding:0 16px}
+.login h1{font-family:var(--display);font-size:3rem;line-height:1;margin:0 0 6px}
+.login form{display:grid;gap:12px;margin-top:20px}
+.tools{display:grid;gap:10px;margin-top:6px}
+.tools-row{display:flex;gap:8px}
+.tools-row select{flex:1}
+.status{font-size:.9rem;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div id="app"><div class="wrap"><p class="muted">Loading…</p></div></div>
+<script>
+(function(){
+var app=document.getElementById('app');
+var state=null, tab='today', editing=null, editErr='', dirty=false, saving=false, barErr='', notice='', toast='', toolMsg='';
+var SLOTS=['morning','midday','evening'];
+var SLOT_NAME={morning:'Morning',midday:'Midday',evening:'Evening'};
+var TIER={device:'Claude checks Apple Health',paper:'Claude checks statements',word:'On your word'};
+var TIER_OPT={device:'Apple Health (Claude checks)',paper:'Statement or receipt (Claude checks)',word:'Your word only'};
+var FREQ_OPT={daily:'Every day',weekdays:'Weekdays',monthly:'Monthly'};
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function now(){
+  var f=new Intl.DateTimeFormat('en-US',{timeZone:state.settings.tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  var p={};f.formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+  var h=(+p.hour)%24;
+  return {key:p.year+'-'+p.month+'-'+p.day,mins:h*60+(+p.minute),hhmm:String(h).padStart(2,'0')+':'+p.minute};
+}
+function toMins(t){var a=t.split(':').map(Number);return a[0]*60+a[1];}
+function fmt12(t){var a=t.split(':').map(Number),h=a[0],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+String(a[1]).padStart(2,'0')+' '+ap;}
+function parseKey(k){var a=k.split('-').map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]));}
+function addDays(k,n){var d=parseKey(k);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function fmtDate(k,long){return parseKey(k).toLocaleDateString('en-US',long?{timeZone:'UTC',weekday:'long',month:'long',day:'numeric'}:{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});}
+function ord(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function occurs(c,k){
+  if(c.since&&k<c.since)return false;
+  var d=parseKey(k),wd=d.getUTCDay();
+  if(c.freq==='daily')return true;
+  if(c.freq==='weekdays')return wd>=1&&wd<=5;
+  if(c.freq==='monthly'){if(!c.day)return false;var last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();return d.getUTCDate()===Math.min(c.day,last);}
+  return false;
+}
+function entry(k,id){return (state.log[k]||{})[id];}
+function setEntry(k,id,val){state.log[k]=state.log[k]||{};if(val)state.log[k][id]=val;else delete state.log[k][id];if(!Object.keys(state.log[k]).length)delete state.log[k];dirty=true;}
+function freqText(c){if(c.freq==='monthly')return c.day?'Monthly on the '+ord(c.day):'Monthly, due day not set';return FREQ_OPT[c.freq];}
+
+/* ---------- API ---------- */
+function api(method,url,body){
+  return fetch(url,{method:method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined})
+    .then(function(r){return r.text().then(function(t){var j=null;try{j=t?JSON.parse(t):null;}catch(e){}return {status:r.status,ok:r.ok,data:j};});});
+}
+function load(quiet){
+  return api('GET','/api/state').then(function(r){
+    if(r.status===401){state=null;renderLogin('');return;}
+    if(!r.ok){app.innerHTML='<div class="wrap"><p class="error-line">Couldn\u2019t load: '+esc(r.data&&r.data.error||r.status)+'</p></div>';return;}
+    state=r.data.state;dirty=false;if(!quiet)render();else render();
+  });
+}
+function save(){
+  var bad=false;
+  Object.keys(state.log).forEach(function(k){Object.keys(state.log[k]).forEach(function(id){var e=state.log[k][id];if(e.s==='missed'&&!String(e.why||'').trim())bad=true;});});
+  if(bad){barErr='Give a reason for every miss before saving.';render();return;}
+  saving=true;barErr='';renderBar();
+  api('PUT','/api/state',{state:state,rev:state.rev||0}).then(function(r){
+    saving=false;
+    if(r.ok){state=r.data.state;dirty=false;flash('Saved');return;}
+    if(r.status===409){state=r.data.state;dirty=false;notice='Something saved from an email button while you were editing. You\u2019re looking at the latest now. Redo your change.';render();return;}
+    if(r.status===401){renderLogin('Your session ended. Sign in again, then redo your change.');return;}
+    barErr='Save failed: '+(r.data&&r.data.error||r.status);render();
+  },function(){saving=false;barErr='Save failed. Check your connection.';render();});
+}
+function flash(m){toast=m;render();setTimeout(function(){toast='';render();},2000);}
+
+/* ---------- Login ---------- */
+function renderLogin(msg){
+  app.innerHTML='<div class="login"><h1>Day by Datum</h1><p class="muted">Sign in to check in.</p>'+
+    '<form id="login"><input type="password" name="password" autocomplete="current-password" placeholder="Password" required aria-label="Password">'+
+    (msg?'<p class="error-line">'+esc(msg)+'</p>':'')+'<button class="btn b-primary" type="submit">Sign in</button></form></div>';
+  document.getElementById('login').addEventListener('submit',function(ev){
+    ev.preventDefault();
+    api('POST','/api/login',{password:ev.target.password.value}).then(function(r){
+      if(r.ok)load();else renderLogin(r.data&&r.data.error||'Sign-in failed.');
+    });
+  });
+}
+
+/* ---------- Today ---------- */
+function viewToday(){
+  var n=now(),k=n.key,cps=state.settings.checkpoints;
+  var items=state.commitments.filter(function(c){return occurs(c,k);});
+  function st(c){var e=entry(k,c.id);return e&&e.s;}
+  function isLate(c){return !st(c)&&toMins(cps[c.slot])<=n.mins;}
+  var done=items.filter(function(c){return st(c)==='done';}).length;
+  var missed=items.filter(function(c){return st(c)==='missed';}).length;
+  var late=items.filter(isLate).length;
+  var next=SLOTS.filter(function(s){return toMins(cps[s])>n.mins;})[0];
+  function pct(m){return Math.min(100,Math.max(0,(m-300)/(1440-300)*100));}
+  var h='<section class="hero"><div class="hero-time">'+(next?fmt12(cps[next]):'Day closed')+'</div>'+
+    '<div class="hero-label">'+(next?SLOT_NAME[next]+' checkpoint is next':'All three checkpoints have passed. Close out what\u2019s left.')+'</div>'+
+    '<div class="track" aria-hidden="true"><div class="track-line"></div><div class="track-fill" style="width:'+pct(n.mins)+'%"></div>';
+  SLOTS.forEach(function(s){
+    var m=toMins(cps[s]),passed=m<=n.mins,lateS=passed&&items.some(function(c){return c.slot===s&&isLate(c);});
+    h+='<div class="tick'+(passed?' passed':'')+(lateS?' late':'')+'" style="left:'+Math.min(94,Math.max(6,pct(m)))+'%"><i></i><span>'+fmt12(cps[s]).replace(':00','')+'</span></div>';
+  });
+  h+='<div class="now" style="left:'+pct(n.mins)+'%"></div></div><div class="stats"><span>'+done+' of '+items.length+' done</span>'+
+    (late?'<span class="bad-text">'+late+' overdue</span>':'')+(missed?'<span class="bad-text">'+missed+' missed</span>':'')+'</div></section>';
+  var notes=[];
+  if(notice)notes.push(esc(notice));
+  var noDay=state.commitments.filter(function(c){return c.freq==='monthly'&&!c.day;});
+  if(noDay.length)notes.push('No due day set for '+noDay.map(function(c){return esc(c.title);}).join(', ')+'. They won\u2019t show up until you set one. <button class="link" data-goto="commitments">Set due days</button>');
+  state.commitments.forEach(function(c){
+    if(c.freq!=='monthly'||!c.day)return;
+    for(var i=1;i<=5;i++){var kk=addDays(k,i);if(occurs(c,kk)){notes.push(esc(c.title)+(c.amount?' ('+esc(c.amount)+')':'')+' is due in '+i+' day'+(i>1?'s':'')+', '+fmtDate(kk)+'.');break;}}
+  });
+  if(notes.length)h+='<div class="notice">'+notes.map(function(x){return '<p>'+x+'</p>';}).join('')+'</div>';
+  SLOTS.forEach(function(s){
+    var list=items.filter(function(c){return c.slot===s;});
+    if(!list.length)return;
+    var passed=toMins(cps[s])<=n.mins,lateN=list.filter(isLate).length;
+    h+='<section class="slot"><div class="slot-head"><h2>'+SLOT_NAME[s]+'</h2><span'+(lateN?' class="bad-text"':'')+'>'+
+      (lateN?lateN+' overdue since '+fmt12(cps[s]):(passed?'Was due '+fmt12(cps[s]):'Due by '+fmt12(cps[s])))+'</span></div><ul class="items">';
+    list.forEach(function(c){
+      var e=entry(k,c.id),s2=e&&e.s,lt=isLate(c);
+      h+='<li class="item'+(s2?' '+s2:(lt?' overdue':''))+'"><div><span class="item-title">'+esc(c.title)+'</span>'+
+        '<span class="item-meta">'+TIER[c.tier]+(c.amount?', '+esc(c.amount):'')+(lt?' <span class="late-tag">Overdue</span>':'')+
+        (e&&e.at?' \u2022 marked '+fmt12(e.at)+(e.via==='email'?' by email':''):'')+'</span></div>'+
+        '<div class="item-actions"><button class="btn b-done" data-act="done" data-id="'+c.id+'" aria-pressed="'+(s2==='done')+'">Done</button>'+
+        '<button class="btn b-miss" data-act="missed" data-id="'+c.id+'" aria-pressed="'+(s2==='missed')+'">Missed</button></div>'+
+        (s2==='missed'?'<label class="why">Why did you miss it?<input data-why="'+c.id+'" value="'+esc(e.why||'')+'" placeholder="Be specific. No \u201cjust didn\u2019t.\u201d"'+(String(e.why||'').trim()?'':' class="need"')+'></label>':'')+'</li>';
+    });
+    h+='</ul></section>';
+  });
+  if(!items.length)h+='<p class="muted" style="margin-top:24px">Nothing is scheduled for today.</p>';
+  h+='<p class="foot">Anything not marked by its checkpoint counts as missed on your scorecard. Claude reads this record at each check-in.</p>';
+  return h;
+}
+
+/* ---------- Scorecard ---------- */
+function dayScore(k,todayKey,nowMins){
+  var items=state.commitments.filter(function(c){return occurs(c,k);});
+  if(!items.length)return null;
+  var r={done:0,missed:0,silent:0,open:0};
+  items.forEach(function(c){var e=entry(k,c.id);
+    if(e&&e.s==='done')r.done++;else if(e&&e.s==='missed')r.missed++;
+    else if(k<todayKey||toMins(state.settings.checkpoints[c.slot])<=nowMins)r.silent++;else r.open++;});
+  r.counted=r.done+r.missed+r.silent;return r;
+}
+function viewScore(){
+  var n=now(),k=n.key,h='',tot={done:0,missed:0,silent:0,counted:0};
+  for(var i=6;i>=0;i--){var s=dayScore(addDays(k,-i),k,n.mins);if(s){tot.done+=s.done;tot.missed+=s.missed;tot.silent+=s.silent;tot.counted+=s.counted;}}
+  var pct=tot.counted?Math.round(tot.done/tot.counted*100):null;
+  h+='<div class="big">'+(pct==null?'No data':pct+'%')+'</div><p class="muted" style="margin:6px 0 0">'+(pct==null?'Your first checkpoint hasn\u2019t passed yet.':'done over the last 7 days')+'</p>';
+  if(tot.counted)h+='<div class="stats" style="margin-top:12px"><span>'+tot.done+' done</span><span class="bad-text">'+tot.missed+' missed</span><span class="bad-text">'+tot.silent+' never marked</span></div>';
+  h+='<h2 class="sec">Last 14 days</h2><div class="grid">';
+  for(var j=13;j>=0;j--){
+    var dk=addDays(k,-j),sc=dayScore(dk,k,n.mins),d=parseKey(dk),cls='none',lbl='';
+    if(sc&&sc.counted){var r=sc.done/sc.counted;cls=r>=1?'full':(r>=.7?'part':'low');lbl=Math.round(r*100)+'%';}else if(sc){cls='';lbl='open';}
+    h+='<div class="cell '+cls+'" title="'+fmtDate(dk)+'"><span>'+d.toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short'})+'</span><b>'+d.getUTCDate()+'</b><span>'+lbl+'</span></div>';
+  }
+  h+='</div><div class="legend"><span><i style="background:var(--done)"></i>All done</span><span><i style="background:var(--amber)"></i>70% or more</span><span><i style="background:var(--miss)"></i>Under 70%</span></div>';
+  var misses=[];
+  for(var m=0;m<14;m++){var mk=addDays(k,-m),lg=state.log[mk]||{};
+    Object.keys(lg).forEach(function(id){if(lg[id].s==='missed'){var c=state.commitments.filter(function(x){return x.id===id;})[0];misses.push({k:mk,t:c?c.title:'(deleted commitment)',why:lg[id].why});}});}
+  h+='<h2 class="sec">Misses and your reasons</h2>';
+  h+=misses.length?'<ul class="misses">'+misses.map(function(x){return '<li><b>'+esc(x.t)+'</b> <span class="muted">'+fmtDate(x.k)+'</span><br>'+esc(x.why||'No reason given')+'</li>';}).join('')+'</ul>':'<p class="muted">No misses logged in the last 14 days.</p>';
+  return h;
+}
+
+/* ---------- Commitments ---------- */
+function formHTML(){
+  var e=editing;
+  function opts(map,val){return Object.keys(map).map(function(k){return '<option value="'+k+'"'+(k===val?' selected':'')+'>'+map[k]+'</option>';}).join('');}
+  return '<div class="form" id="form"><h2 class="sec">'+(e.isNew?'New commitment':'Edit commitment')+'</h2>'+
+    '<label class="field"><span>What</span><input data-f="title" value="'+esc(e.title)+'" placeholder="e.g. 30 exercise minutes"></label>'+
+    '<div class="row2"><label class="field"><span>Checkpoint</span><select data-f="slot">'+opts(SLOT_NAME,e.slot)+'</select></label>'+
+    '<label class="field"><span>How often</span><select data-f="freq">'+opts(FREQ_OPT,e.freq)+'</select></label></div>'+
+    '<label class="field"><span>How it\u2019s verified</span><select data-f="tier">'+opts(TIER_OPT,e.tier)+'</select></label>'+
+    (e.freq==='monthly'?'<div class="row2"><label class="field"><span>Due day of month</span><input data-f="day" type="number" min="1" max="31" inputmode="numeric" value="'+(e.day||'')+'"></label>'+
+      '<label class="field"><span>Amount</span><input data-f="amount" value="'+esc(e.amount||'')+'" placeholder="$0.00"></label></div>':'')+
+    (editErr?'<p class="error-line">'+esc(editErr)+'</p>':'')+
+    '<div class="form-actions"><button class="btn b-primary" data-apply>'+(e.isNew?'Add':'Update')+'</button><button class="btn" data-cancel>Cancel</button>'+
+    (e.isNew?'':'<button class="btn b-danger" data-delete>'+(e.confirmDelete?'Tap again to delete':'Delete')+'</button>')+'</div></div>';
+}
+function viewCommit(){
+  var cps=state.settings.checkpoints;
+  var h='<h2 class="sec">Checkpoint times</h2><div class="cps">'+SLOTS.map(function(s){
+    return '<label class="field"><span>'+SLOT_NAME[s]+'</span><input type="time" data-cp="'+s+'" value="'+cps[s]+'"></label>';}).join('')+'</div>';
+  h+=editing?formHTML():'<button class="btn btn-wide" data-add>Add a commitment</button>';
+  SLOTS.forEach(function(s){
+    var list=state.commitments.filter(function(c){return c.slot===s;});
+    if(!list.length)return;
+    h+='<h2 class="sec">'+SLOT_NAME[s]+', by '+fmt12(cps[s])+'</h2><ul class="clist">'+list.map(function(c){
+      return '<li class="crow"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta">'+freqText(c)+(c.amount?', '+esc(c.amount):'')+'. '+TIER[c.tier]+'</span></div>'+
+        '<button class="btn" data-edit="'+c.id+'">Edit</button></li>';}).join('')+'</ul>';
+  });
+  h+='<h2 class="sec">Email</h2><div class="tools"><div class="tools-row"><select id="testslot" aria-label="Checkpoint to test">'+
+    SLOTS.map(function(s){return '<option value="'+s+'">'+SLOT_NAME[s]+' email</option>';}).join('')+
+    '</select><button class="btn" data-test>Send a test</button></div>'+(toolMsg?'<p class="status">'+esc(toolMsg)+'</p>':'')+
+    '<button class="btn" data-logout>Sign out</button></div>';
+  return h;
+}
+
+/* ---------- Shell ---------- */
+function barHTML(){
+  if(!dirty&&!barErr)return '';
+  return '<div class="bar"><div class="bar-in"><span>'+(barErr?'<b>'+esc(barErr)+'</b>':(saving?'Saving\u2026':'You have unsaved changes'))+'</span>'+
+    '<button class="btn btn-save" data-save'+(saving?' disabled':'')+'>Save</button></div></div>';
+}
+function renderBar(){var b=document.getElementById('bar');if(b)b.innerHTML=barHTML();}
+function render(){
+  if(!state)return;
+  var k=now().key,tabs=[['today','Today'],['score','Scorecard'],['commitments','Commitments']];
+  app.innerHTML='<div class="wrap"><header class="top"><div class="date">'+fmtDate(k,true)+'</div><nav class="tabs">'+
+    tabs.map(function(t){return '<button data-tab="'+t[0]+'"'+(tab===t[0]?' aria-current="page"':'')+'>'+t[1]+'</button>';}).join('')+'</nav></header>'+
+    (tab==='today'?viewToday():tab==='score'?viewScore():viewCommit())+'</div><div id="bar">'+barHTML()+'</div>'+
+    (toast?'<div class="toast" role="status">'+esc(toast)+'</div>':'');
+}
+function readForm(){
+  var f=document.getElementById('form');if(!f)return;
+  f.querySelectorAll('[data-f]').forEach(function(el){var key=el.getAttribute('data-f'),v=el.value;
+    if(key==='day'){var num=parseInt(v,10);editing.day=isNaN(num)?null:num;}else editing[key]=v;});
+}
+
+app.addEventListener('click',function(ev){
+  var t=ev.target.closest('button');if(!t||!state)return;
+  var k=now().key;
+  if(t.dataset.tab){tab=t.dataset.tab;notice='';render();window.scrollTo(0,0);return;}
+  if(t.dataset.goto){tab=t.dataset.goto;render();window.scrollTo(0,0);return;}
+  if(t.dataset.act){
+    var id=t.dataset.id,cur=entry(k,id),act=t.dataset.act,at=now().hhmm;
+    if(act==='done')setEntry(k,id,cur&&cur.s==='done'?null:{s:'done',at:at,via:'web'});
+    else setEntry(k,id,cur&&cur.s==='missed'?null:{s:'missed',why:'',at:at,via:'web'});
+    barErr='';render();
+    if(act==='missed'){var inp=app.querySelector('[data-why="'+id+'"]');if(inp)inp.focus();}
+    return;
+  }
+  if(t.hasAttribute('data-save')){save();return;}
+  if(t.hasAttribute('data-test')){
+    if(dirty){toolMsg='Save your changes first, so the email matches.';render();return;}
+    var slot=document.getElementById('testslot').value;toolMsg='Sending\u2026';render();
+    api('POST','/api/cron?force='+slot).then(function(r){
+      toolMsg=r.ok?'Sent. Check '+SLOT_NAME[slot].toLowerCase()+' email in your inbox.':'Send failed: '+(r.data&&r.data.error||r.status);render();});
+    return;
+  }
+  if(t.hasAttribute('data-logout')){api('DELETE','/api/login').then(function(){state=null;renderLogin('');});return;}
+  if(t.hasAttribute('data-add')){editErr='';editing={id:'c'+Date.now().toString(36),title:'',tier:'word',slot:'morning',freq:'daily',day:null,amount:'',since:k,isNew:true};render();return;}
+  if(t.dataset.edit){editErr='';var c=state.commitments.filter(function(x){return x.id===t.dataset.edit;})[0];editing=JSON.parse(JSON.stringify(c));render();window.scrollTo(0,0);return;}
+  if(t.hasAttribute('data-cancel')){editing=null;render();return;}
+  if(t.hasAttribute('data-delete')){
+    if(!editing.confirmDelete){readForm();editing.confirmDelete=true;render();return;}
+    var delId=editing.id;state.commitments=state.commitments.filter(function(x){return x.id!==delId;});editing=null;dirty=true;render();return;
+  }
+  if(t.hasAttribute('data-apply')){
+    readForm();
+    if(!String(editing.title).trim()){editErr='Give it a name.';render();return;}
+    if(editing.freq==='monthly'&&editing.day!=null&&(editing.day<1||editing.day>31)){editErr='Due day has to be between 1 and 31.';render();return;}
+    var obj={id:editing.id,title:editing.title.trim(),tier:editing.tier,slot:editing.slot,freq:editing.freq,since:editing.since||k};
+    if(obj.freq==='monthly'){obj.day=editing.day||null;obj.amount=(editing.amount||'').trim();}
+    var idx=state.commitments.map(function(x){return x.id;}).indexOf(obj.id);
+    if(idx>-1)state.commitments[idx]=obj;else state.commitments.push(obj);
+    editing=null;editErr='';dirty=true;render();return;
+  }
+});
+app.addEventListener('input',function(ev){
+  var el=ev.target;
+  if(el.dataset&&el.dataset.why){var e=entry(now().key,el.dataset.why);
+    if(e){e.why=el.value;dirty=true;el.classList.toggle('need',!el.value.trim());barErr='';renderBar();}}
+});
+app.addEventListener('change',function(ev){
+  var el=ev.target;if(!el.dataset)return;
+  if(el.dataset.cp&&el.value){state.settings.checkpoints[el.dataset.cp]=el.value;dirty=true;render();}
+  if(el.dataset.f==='freq'||el.dataset.f==='tier'){readForm();render();}
+});
+// Pull in anything marked from email when you come back to the tab
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&state&&!dirty)load(true);});
+setInterval(function(){var a=document.activeElement;if(state&&tab==='today'&&!(a&&a.matches&&a.matches('input,select')))render();},60000);
+load();
+})();
+</script>
+</body>
+</html>

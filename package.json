@@ -1,0 +1,8 @@
+{
+  "name": "day_by_datum",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Three daily checkpoints, email check-ins, and a record Claude can read.",
+  "engines": { "node": ">=20" }
+}
