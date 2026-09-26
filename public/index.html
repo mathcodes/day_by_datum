@@ -217,6 +217,44 @@ input.need{border-color:var(--miss)}
 .menu-btn{display:none}
 .notice.ro{margin:0 0 18px}
 
+/* ---------- Weekly progress ---------- */
+:root{--g-health:#1F8A94;--g-money:#3A5BD9;--g-habits:#8A4FD1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0}}
+:root[data-theme="dark"]{--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0}
+.wk{margin-bottom:16px}
+.wk-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px}
+.wk-head h2{font-family:var(--display);font-weight:600;font-size:1.45rem;margin:0}
+.wk-num{display:flex;flex-direction:column;align-items:flex-end}
+.wk-track{position:relative;padding-top:24px}
+.wk-bar,.mini-bar{display:flex;width:100%;overflow:hidden;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.wk-bar{height:30px;border-radius:6px}
+.seg{display:block;height:100%;min-width:2px}
+.seg+.seg{box-shadow:inset 2px 0 0 var(--card)}
+.wk-pace{position:absolute;top:0;bottom:-4px;transform:translateX(-1px);pointer-events:none}
+.wk-pace i{position:absolute;top:18px;bottom:0;left:0;width:2px;background:var(--ink)}
+.wk-pace b{position:absolute;top:0;left:0;transform:translateX(-50%);font-size:.72rem;white-space:nowrap;color:var(--muted)}
+.wk-foot{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+.wk-legend{display:flex;gap:18px;flex-wrap:wrap;list-style:none;margin:0;padding:0;font-size:.9rem}
+.wk-legend li{display:flex;align-items:center;gap:7px}
+.wk-legend i{width:12px;height:12px;border-radius:3px;flex:none}
+.wk-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hist{max-width:980px}
+.hist-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}
+.hist-sum>div{display:flex;flex-direction:column;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.hist-legend{margin-bottom:12px}
+.hist-list{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.hist-row{display:grid;grid-template-columns:130px minmax(0,1fr) 84px;gap:16px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+.hist-row:first-child{border-top:0}
+.hist-row.cur{background:var(--bg)}
+.hist-when{display:flex;flex-direction:column}
+.mini-bar{height:14px;border-radius:4px}
+.hist-num{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+@media (max-width:600px){
+  .wk-head{flex-direction:column;align-items:flex-start}.wk-num{align-items:flex-start}
+  .hist-sum{grid-template-columns:1fr 1fr}.hist-sum>div:last-child{grid-column:1/-1}
+  .hist-row{grid-template-columns:1fr auto;gap:6px 12px;padding:12px 14px}.hist-row .mini-bar{grid-column:1/-1;grid-row:2}
+}
+
 /* ---------- Home ---------- */
 .home{max-width:1240px}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
@@ -344,7 +382,8 @@ var CAT_KEYS=['device','paper','word'];
 var FREQ_OPT={daily:'Every day',weekdays:'Weekdays',monthly:'Monthly',once:'One time'};
 var NEEDS_WHY={missed:1,bypassed:1};
 var STATUS_LBL={done:'Done',missed:'Missed',bypassed:'Bypassed'};
-var TITLES={home:'Home',today:'Today',cal:'Calendar',score:'Scorecard',commitments:'Commitments'};
+var TITLES={home:'Home',today:'Today',cal:'Calendar',score:'Scorecard',progress:'Progress history',commitments:'Commitments'};
+var CAT_VAR={device:'--g-health',paper:'--g-money',word:'--g-habits'};
 
 function ico(p){return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';}
 var I={
@@ -359,7 +398,8 @@ var I={
   menu:ico('<path d="M3 6h18M3 12h18M3 18h18"/>'),
   chev:ico('<path d="m15 6-6 6 6 6"/>'),
   dl:ico('<path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/>'),
-  close:ico('<path d="M6 6l12 12M18 6 6 18"/>')
+  close:ico('<path d="M6 6l12 12M18 6 6 18"/>'),
+  prog:ico('<rect x="3" y="9" width="18" height="6" rx="1"/><path d="M9 9v6M14 9v6"/>')
 };
 
 /* ---------- Helpers ---------- */
@@ -605,7 +645,7 @@ function viewHome(){
     state.commitments.forEach(function(c){if(due||!isSpecial(c)||!(catFilter==='all'||c.tier===catFilter)||!occurs(c,dk))return;
       if(units(c).some(function(u){var e=entry(dk,u.key);return !e||e.s!=='done';}))due={c:c,k:dk,i:i};});}
 
-  var h='<div class="home">';
+  var h='<div class="home">'+weekCard(n);
   h+='<section class="kpis" aria-label="Key metrics">';
   h+='<button class="kpi" data-tab="score"><span class="kpi-label">Completion, last '+range+' days</span><span class="kpi-value">'+(cur.pct==null?'\u2014':cur.pct+'%')+'</span>'+
     '<span class="kpi-sub">'+(delta==null?(cur.pct==null?'Starts after your first checkpoint':'No earlier period to compare yet'):(delta>=0?'<span class="up">\u25b2 '+delta+' pts</span>':'<span class="down">\u25bc '+Math.abs(delta)+' pts</span>')+' vs prior '+range+' days')+'</span></button>';
@@ -667,6 +707,66 @@ function drawCharts(){
       onHover:function(evt,els){if(evt.native&&evt.native.target)evt.native.target.style.cursor=els&&els.length?'pointer':'default';}}});
 }
 window.__chartReady=function(){if(state&&tab==='home')drawCharts();};
+
+/* ---------- Weekly progress ---------- */
+function weekStart(k){var d=parseKey(k),off=(d.getUTCDay()+6)%7;return addDays(k,-off);}
+function weekLabel(ws){
+  var a=parseKey(ws),b=parseKey(addDays(ws,6)),o={timeZone:'UTC',month:'short',day:'numeric'};
+  var la=a.toLocaleDateString('en-US',o),lb=a.getUTCMonth()===b.getUTCMonth()?String(b.getUTCDate()):b.toLocaleDateString('en-US',o);
+  return la+'\u2013'+lb;
+}
+// Capacity = every task scheduled that week, minus bypasses. Only Done fills the bar.
+function weekStats(ws,n){
+  var w={total:0,done:0,pace:0,cat:{}};
+  CAT_KEYS.forEach(function(c){w.cat[c]={total:0,done:0};});
+  for(var i=0;i<7;i++){var dk=addDays(ws,i);
+    unitsOn(dk).forEach(function(u){var e=entry(dk,u.key);
+      if(e&&e.s==='bypassed')return;
+      var c=w.cat[u.c.tier];w.total++;c.total++;
+      if(e&&e.s==='done'){w.done++;c.done++;}
+      if(isPast(dk,u,n))w.pace++;
+    });}
+  w.pct=w.total?Math.round(w.done/w.total*100):null;
+  return w;
+}
+function segBar(w,cls){
+  var segs=CAT_KEYS.map(function(c){var v=w.total?w.cat[c].done/w.total*100:0;
+    return v?'<span class="seg" style="width:'+v.toFixed(2)+'%;background:var('+CAT_VAR[c]+')" title="'+CAT[c]+': '+w.cat[c].done+' done"></span>':'';}).join('');
+  var label=(w.pct==null?'Nothing scheduled':w.pct+'% filled, '+w.done+' of '+w.total+' done. ')+CAT_KEYS.map(function(c){return CAT[c]+' '+w.cat[c].done+' of '+w.cat[c].total;}).join(', ');
+  return '<div class="'+cls+'" role="img" aria-label="'+esc(label)+'">'+segs+'</div>';
+}
+function weekCard(n){
+  var ws=weekStart(n.key),w=weekStats(ws,n);
+  var pacePct=w.total?Math.round(w.pace/w.total*100):0,diff=(w.pct||0)-pacePct;
+  var paceTxt=!w.total?'':w.pace===0?'Week just started':diff>=0?'<span class="up">Ahead of pace by '+diff+' pts</span>':'<span class="down">Behind pace by '+Math.abs(diff)+' pts</span>';
+  var h='<section class="card wk" aria-labelledby="h-wk"><div class="wk-head"><div><h2 id="h-wk">This week</h2><span class="muted small">'+weekLabel(ws)+'. Only completed tasks fill the bar</span></div>'+
+    '<div class="wk-num"><span class="kpi-value">'+(w.pct==null?'\u2014':w.pct+'%')+'</span><span class="muted small">'+w.done+' of '+w.total+' done</span></div></div>';
+  h+='<div class="wk-track">'+segBar(w,'wk-bar')+(w.total&&w.pace?'<span class="wk-pace" style="left:'+pacePct+'%" title="Where you\u2019d be if you were caught up"><i></i><b>On pace: '+pacePct+'%</b></span>':'')+'</div>';
+  h+='<div class="wk-foot"><ul class="wk-legend">'+CAT_KEYS.map(function(c){var x=w.cat[c];
+    return '<li><i style="background:var('+CAT_VAR[c]+')"></i><b>'+CAT[c]+'</b><span class="muted">'+x.done+' of '+x.total+'</span></li>';}).join('')+'</ul>'+
+    '<div class="wk-right">'+(paceTxt?'<span class="small">'+paceTxt+'</span>':'')+'<button class="link" data-tab="progress">See progress history</button></div></div></section>';
+  return h;
+}
+function viewHistory(){
+  var n=now(),cur=weekStart(n.key),first=null;
+  state.commitments.forEach(function(c){if(c.since&&(!first||c.since<first))first=c.since;});
+  var startWk=weekStart(first||n.key),weeks=[];
+  for(var ws=cur;ws>=startWk&&weeks.length<52;ws=addDays(ws,-7))weeks.push(ws);
+  var stats=weeks.map(function(ws){return {ws:ws,w:weekStats(ws,n)};});
+  var done=stats.filter(function(x){return x.ws!==cur&&x.w.total;});
+  var best=done.reduce(function(b,x){return !b||x.w.pct>b.w.pct?x:b;},null);
+  var avg=done.length?Math.round(done.reduce(function(a,x){return a+x.w.pct;},0)/done.length):null;
+  var h='<div class="hist">';
+  h+='<div class="hist-sum"><div><span class="kpi-label">Weeks tracked</span><span class="kpi-value">'+weeks.length+'</span></div>'+
+    '<div><span class="kpi-label">Average fill</span><span class="kpi-value">'+(avg==null?'\u2014':avg+'%')+'</span>'+(avg==null?'<span class="muted small">After your first full week</span>':'')+'</div>'+
+    '<div><span class="kpi-label">Best week</span><span class="kpi-value">'+(best?best.w.pct+'%':'\u2014')+'</span>'+(best?'<span class="muted small">'+weekLabel(best.ws)+'</span>':'')+'</div></div>';
+  h+='<ul class="wk-legend hist-legend">'+CAT_KEYS.map(function(c){return '<li><i style="background:var('+CAT_VAR[c]+')"></i><b>'+CAT[c]+'</b></li>';}).join('')+'<li class="muted">Empty track is unfinished work</li></ul>';
+  h+='<ol class="hist-list">'+stats.map(function(x){var w=x.w,isCur=x.ws===cur;
+    return '<li class="hist-row'+(isCur?' cur':'')+'"><div class="hist-when"><b>'+weekLabel(x.ws)+'</b>'+(isCur?'<span class="muted small">In progress</span>':'')+'</div>'+
+      segBar(w,'mini-bar')+'<div class="hist-num"><b>'+(w.pct==null?'\u2014':w.pct+'%')+'</b><span class="muted small">'+w.done+'/'+w.total+'</span></div></li>';}).join('')+'</ol>';
+  if(weeks.length<2)h+='<p class="muted" style="margin-top:14px">Your history starts here. A new bar appears every Monday.</p>';
+  return h+'</div>';
+}
 
 /* ---------- Today ---------- */
 function viewToday(){
@@ -923,7 +1023,7 @@ function renderBar(){var b=document.getElementById('bar');if(b)b.innerHTML=barHT
 function render(){
   if(!state)return;
   var k=now().key;
-  var nav=[['home','Home',I.home],['today','Today',I.today],['cal','Calendar',I.cal],['score','Scorecard',I.score]];
+  var nav=[['home','Home',I.home],['today','Today',I.today],['cal','Calendar',I.cal],['score','Scorecard',I.score],['progress','Progress',I.prog]];
   if(!readOnly)nav.push(['commitments','Commitments',I.list]);
   var filters=tab==='home'||tab==='score'||tab==='cal';
   var side='<aside class="side" aria-label="Main">'+
@@ -945,7 +1045,7 @@ function render(){
       (readOnly?'':'<button role="menuitem" data-export="share">Share a view-only link<span>Read only, no sign-in</span></button>')+'</div>':'')+
     '</div></div></header>';
   var banner=readOnly?'<div class="notice ro"><p>View-only. You can look around, but nothing here can be changed.</p></div>':'';
-  var body=tab==='home'?viewHome():'<div class="wrap">'+(tab==='today'?viewToday():tab==='cal'?viewCal():tab==='score'?viewScore():viewCommit())+'</div>';
+  var body=tab==='home'?viewHome():tab==='progress'?viewHistory():'<div class="wrap">'+(tab==='today'?viewToday():tab==='cal'?viewCal():tab==='score'?viewScore():viewCommit())+'</div>';
   app.innerHTML='<div class="shell'+(collapsed?' collapsed':'')+(navOpen?' nav-open':'')+'">'+side+'<div class="scrim" data-closenav></div>'+
     '<main class="main" id="main">'+top+banner+body+'</main><div id="bar">'+barHTML()+'</div></div>'+modalHTML()+
     (toast?'<div class="toast" role="status">'+esc(toast)+'</div>':'');
