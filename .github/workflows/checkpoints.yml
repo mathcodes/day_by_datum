@@ -1,0 +1,19 @@
+name: Checkpoint emails
+
+# Pings the app every 30 minutes. The app decides whether a checkpoint email is due,
+# and sends each one at most once per day. GitHub may delay scheduled runs; the app allows for that.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping /api/cron
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron"

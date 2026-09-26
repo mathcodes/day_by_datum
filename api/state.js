@@ -10,7 +10,10 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       if (!isOwner(req) && !isReader(req)) return res.status(401).json({ error: 'Sign in first.' });
       const state = await getState();
-      return res.json({ now: localNow(state.settings.tz), state });
+      const body = { now: localNow(state.settings.tz), state };
+      // The owner's dashboard gets the read-only token so it can build a view-only link.
+      if (isOwner(req) && process.env.READ_TOKEN) body.readToken = process.env.READ_TOKEN;
+      return res.json(body);
     }
     if (req.method === 'PUT') {
       if (!isOwner(req)) return res.status(401).json({ error: 'Sign in first.' });
