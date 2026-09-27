@@ -222,8 +222,6 @@ input.need{border-color:var(--miss)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0}}
 :root[data-theme="dark"]{--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0}
 .wk{margin-bottom:16px}
-.prio{display:inline-block;font-size:.72rem;font-weight:700;padding:0 6px;border-radius:4px;border:1px solid currentColor;line-height:1.4;vertical-align:1px}
-.prio-high{color:var(--ink)}.prio-medium{color:var(--muted)}.prio-low{color:var(--muted);border-style:dashed}
 .wk-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px}
 .wk-head h2{font-family:var(--display);font-weight:600;font-size:1.45rem;margin:0}
 .wk-num{display:flex;flex-direction:column;align-items:flex-end}
@@ -386,12 +384,6 @@ var NEEDS_WHY={missed:1,bypassed:1};
 var STATUS_LBL={done:'Done',missed:'Missed',bypassed:'Bypassed'};
 var TITLES={home:'Home',today:'Today',cal:'Calendar',score:'Scorecard',progress:'Progress history',commitments:'Commitments'};
 var CAT_VAR={device:'--g-health',paper:'--g-money',word:'--g-habits'};
-var PRIO={high:{w:4,label:'High'},medium:{w:2,label:'Medium'},low:{w:1,label:'Low'}};
-var PRIO_OPT={high:'High (counts 4\u00d7)',medium:'Medium (counts 2\u00d7)',low:'Low (counts 1\u00d7)'};
-function prioOf(c){return PRIO[c.priority]?c.priority:'medium';}
-// A commitment's weight is split evenly across its parts, so extra buttons don't add extra weight.
-function unitWeight(u){return PRIO[prioOf(u.c)].w/((u.c.parts&&u.c.parts.length)||1);}
-function pts(v){v=Math.round(v*10)/10;return (v%1===0?v.toFixed(0):v.toFixed(1));}
 
 function ico(p){return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';}
 var I={
@@ -725,34 +717,33 @@ function weekLabel(ws){
 }
 // Capacity = every task scheduled that week, minus bypasses. Only Done fills the bar.
 function weekStats(ws,n){
-  var w={total:0,done:0,pace:0,tasks:0,tasksDone:0,cat:{}};
+  var w={total:0,done:0,pace:0,cat:{}};
   CAT_KEYS.forEach(function(c){w.cat[c]={total:0,done:0};});
   for(var i=0;i<7;i++){var dk=addDays(ws,i);
     unitsOn(dk).forEach(function(u){var e=entry(dk,u.key);
       if(e&&e.s==='bypassed')return;
-      var wt=unitWeight(u),c=w.cat[u.c.tier];
-      w.total+=wt;c.total+=wt;w.tasks++;
-      if(e&&e.s==='done'){w.done+=wt;c.done+=wt;w.tasksDone++;}
-      if(isPast(dk,u,n))w.pace+=wt;
+      var c=w.cat[u.c.tier];w.total++;c.total++;
+      if(e&&e.s==='done'){w.done++;c.done++;}
+      if(isPast(dk,u,n))w.pace++;
     });}
   w.pct=w.total?Math.round(w.done/w.total*100):null;
   return w;
 }
 function segBar(w,cls){
   var segs=CAT_KEYS.map(function(c){var v=w.total?w.cat[c].done/w.total*100:0;
-    return v?'<span class="seg" style="width:'+v.toFixed(2)+'%;background:var('+CAT_VAR[c]+')" title="'+CAT[c]+': '+pts(w.cat[c].done)+' points"></span>':'';}).join('');
-  var label=(w.pct==null?'Nothing scheduled':w.pct+'% filled, '+pts(w.done)+' of '+pts(w.total)+' points. ')+CAT_KEYS.map(function(c){return CAT[c]+' '+pts(w.cat[c].done)+' of '+pts(w.cat[c].total)+' points';}).join(', ');
+    return v?'<span class="seg" style="width:'+v.toFixed(2)+'%;background:var('+CAT_VAR[c]+')" title="'+CAT[c]+': '+w.cat[c].done+' done"></span>':'';}).join('');
+  var label=(w.pct==null?'Nothing scheduled':w.pct+'% filled, '+w.done+' of '+w.total+' done. ')+CAT_KEYS.map(function(c){return CAT[c]+' '+w.cat[c].done+' of '+w.cat[c].total;}).join(', ');
   return '<div class="'+cls+'" role="img" aria-label="'+esc(label)+'">'+segs+'</div>';
 }
 function weekCard(n){
   var ws=weekStart(n.key),w=weekStats(ws,n);
   var pacePct=w.total?Math.round(w.pace/w.total*100):0,diff=(w.pct||0)-pacePct;
   var paceTxt=!w.total?'':w.pace===0?'Week just started':diff>=0?'<span class="up">Ahead of pace by '+diff+' pts</span>':'<span class="down">Behind pace by '+Math.abs(diff)+' pts</span>';
-  var h='<section class="card wk" aria-labelledby="h-wk"><div class="wk-head"><div><h2 id="h-wk">This week</h2><span class="muted small">'+weekLabel(ws)+'. Only completed tasks fill it, weighted by priority</span></div>'+
-    '<div class="wk-num"><span class="kpi-value">'+(w.pct==null?'\u2014':w.pct+'%')+'</span><span class="muted small">'+pts(w.done)+' of '+pts(w.total)+' points, '+w.tasksDone+' of '+w.tasks+' tasks</span></div></div>';
+  var h='<section class="card wk" aria-labelledby="h-wk"><div class="wk-head"><div><h2 id="h-wk">This week</h2><span class="muted small">'+weekLabel(ws)+'. Only completed tasks fill the bar</span></div>'+
+    '<div class="wk-num"><span class="kpi-value">'+(w.pct==null?'\u2014':w.pct+'%')+'</span><span class="muted small">'+w.done+' of '+w.total+' done</span></div></div>';
   h+='<div class="wk-track">'+segBar(w,'wk-bar')+(w.total&&w.pace?'<span class="wk-pace" style="left:'+pacePct+'%" title="Where you\u2019d be if you were caught up"><i></i><b>On pace: '+pacePct+'%</b></span>':'')+'</div>';
   h+='<div class="wk-foot"><ul class="wk-legend">'+CAT_KEYS.map(function(c){var x=w.cat[c];
-    return '<li><i style="background:var('+CAT_VAR[c]+')"></i><b>'+CAT[c]+'</b><span class="muted">'+pts(x.done)+' of '+pts(x.total)+' pts</span></li>';}).join('')+'</ul>'+
+    return '<li><i style="background:var('+CAT_VAR[c]+')"></i><b>'+CAT[c]+'</b><span class="muted">'+x.done+' of '+x.total+'</span></li>';}).join('')+'</ul>'+
     '<div class="wk-right">'+(paceTxt?'<span class="small">'+paceTxt+'</span>':'')+'<button class="link" data-tab="progress">See progress history</button></div></div></section>';
   return h;
 }
@@ -769,10 +760,10 @@ function viewHistory(){
   h+='<div class="hist-sum"><div><span class="kpi-label">Weeks tracked</span><span class="kpi-value">'+weeks.length+'</span></div>'+
     '<div><span class="kpi-label">Average fill</span><span class="kpi-value">'+(avg==null?'\u2014':avg+'%')+'</span>'+(avg==null?'<span class="muted small">After your first full week</span>':'')+'</div>'+
     '<div><span class="kpi-label">Best week</span><span class="kpi-value">'+(best?best.w.pct+'%':'\u2014')+'</span>'+(best?'<span class="muted small">'+weekLabel(best.ws)+'</span>':'')+'</div></div>';
-  h+='<ul class="wk-legend hist-legend">'+CAT_KEYS.map(function(c){return '<li><i style="background:var('+CAT_VAR[c]+')"></i><b>'+CAT[c]+'</b></li>';}).join('')+'<li class="muted">Empty track is unfinished work. Weighted by priority</li></ul>';
+  h+='<ul class="wk-legend hist-legend">'+CAT_KEYS.map(function(c){return '<li><i style="background:var('+CAT_VAR[c]+')"></i><b>'+CAT[c]+'</b></li>';}).join('')+'<li class="muted">Empty track is unfinished work</li></ul>';
   h+='<ol class="hist-list">'+stats.map(function(x){var w=x.w,isCur=x.ws===cur;
     return '<li class="hist-row'+(isCur?' cur':'')+'"><div class="hist-when"><b>'+weekLabel(x.ws)+'</b>'+(isCur?'<span class="muted small">In progress</span>':'')+'</div>'+
-      segBar(w,'mini-bar')+'<div class="hist-num"><b>'+(w.pct==null?'\u2014':w.pct+'%')+'</b><span class="muted small">'+pts(w.done)+'/'+pts(w.total)+' pts</span></div></li>';}).join('')+'</ol>';
+      segBar(w,'mini-bar')+'<div class="hist-num"><b>'+(w.pct==null?'\u2014':w.pct+'%')+'</b><span class="muted small">'+w.done+'/'+w.total+'</span></div></li>';}).join('')+'</ol>';
   if(weeks.length<2)h+='<p class="muted" style="margin-top:14px">Your history starts here. A new bar appears every Monday.</p>';
   return h+'</div>';
 }
@@ -811,7 +802,7 @@ function viewToday(){
   if(notes.length)h+='<div class="notice">'+notes.map(function(x){return '<p>'+x+'</p>';}).join('')+'</div>';
   function row(u){
     var e=entry(k,u.key),s2=e&&e.s,lt=isLate(u),c=u.c;
-    var meta=u.sub?'':(prioOf(c)==='high'?'<span class="prio prio-high">High</span> ':'')+TIER[c.tier]+(c.amount?', '+esc(c.amount):'');
+    var meta=u.sub?'':TIER[c.tier]+(c.amount?', '+esc(c.amount):'');
     var stamp=e&&e.at?'marked '+fmt12(e.at)+(e.via==='email'?' by email':''):'';
     var metaLine=[meta,lt?'<span class="late-tag">Overdue</span>':'',stamp].filter(Boolean).join(' \u2022 ');
     var btn=function(act,label,cls){return '<button class="btn '+cls+'" data-act="'+act+'" data-id="'+u.key+'" aria-pressed="'+(s2===act)+'">'+label+'</button>';};
@@ -830,7 +821,7 @@ function viewToday(){
       (lateN?lateN+' overdue since '+fmt12(cps[s]):(passed?'Was due '+fmt12(cps[s]):'Due by '+fmt12(cps[s])))+'</span></div><ul class="items">';
     list.forEach(function(c){
       var uu=units(c);
-      if(uu[0].sub)h+='<li class="item group"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta">'+(prioOf(c)==='high'?'<span class="prio prio-high">High</span> ':'')+TIER[c.tier]+(c.amount?', '+esc(c.amount):'')+'</span></div></li>';
+      if(uu[0].sub)h+='<li class="item group"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta">'+TIER[c.tier]+(c.amount?', '+esc(c.amount):'')+'</span></div></li>';
       uu.forEach(function(u){h+=row(u);});
     });
     h+='</ul></section>';
@@ -919,8 +910,7 @@ function formHTML(){
     '<label class="field"><span>What</span><input data-f="title" value="'+esc(e.title)+'" placeholder="e.g. 30 exercise minutes"></label>'+
     '<div class="row2"><label class="field"><span>Checkpoint</span><select data-f="slot">'+opts(SLOT_NAME,e.slot)+'</select></label>'+
     '<label class="field"><span>How often</span><select data-f="freq">'+opts(FREQ_OPT,e.freq)+'</select></label></div>'+
-    '<div class="row2"><label class="field"><span>Category and how it\u2019s verified</span><select data-f="tier">'+opts(TIER_OPT,e.tier)+'</select></label>'+
-    '<label class="field"><span>Priority</span><select data-f="priority">'+opts(PRIO_OPT,prioOf(e))+'</select></label></div>'+
+    '<label class="field"><span>Category and how it\u2019s verified</span><select data-f="tier">'+opts(TIER_OPT,e.tier)+'</select></label>'+
     '<label class="field"><span>Parts (optional, one per line)</span><textarea data-f="partsText" rows="3" placeholder="e.g.\nI walked\nDog walked">'+esc((e.parts||[]).map(function(p){return p.title;}).join('\n'))+'</textarea>'+
     '<span class="item-meta">Each part gets its own Done, Missed and Bypass buttons.</span></label>'+
     (e.freq==='once'?'<div class="row2"><label class="field"><span>Date</span><input data-f="date" type="date" value="'+esc(e.date||'')+'"></label>'+
@@ -940,7 +930,7 @@ function viewCommit(){
     var list=state.commitments.filter(function(c){return c.slot===s;});
     if(!list.length)return;
     h+='<h2 class="sec">'+SLOT_NAME[s]+', by '+fmt12(cps[s])+'</h2><ul class="clist">'+list.map(function(c){
-      return '<li class="crow"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta"><span class="prio prio-'+prioOf(c)+'">'+PRIO[prioOf(c)].label+'</span> '+CAT[c.tier]+'. '+freqText(c)+(c.amount?', '+esc(c.amount):'')+(c.parts&&c.parts.length?'. '+c.parts.length+' parts':'')+'</span></div>'+
+      return '<li class="crow"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta">'+CAT[c.tier]+'. '+freqText(c)+(c.amount?', '+esc(c.amount):'')+(c.parts&&c.parts.length?'. '+c.parts.length+' parts':'')+'</span></div>'+
         '<button class="btn" data-edit="'+c.id+'">Edit</button></li>';}).join('')+'</ul>';
   });
   h+='<h2 class="sec">Email</h2><div class="tools"><div class="tools-row"><select id="testslot" aria-label="Checkpoint to test">'+
@@ -957,7 +947,6 @@ function modalHTML(){
   if(modal.type==='day'){t=fmtDate(modal.key,true);b=dayDetail(modal.key);}
   if(modal.type==='help'){t='How this works';b='<dl class="help">'+
     '<dt>Done, Missed, Bypass</dt><dd>Done counts for you. Missed counts against you and needs a reason. Bypass is for things that genuinely don\u2019t apply that day. It needs a reason too, doesn\u2019t affect your score, and stays on your record.</dd>'+
-    '<dt>Priority</dt><dd>High counts 4\u00d7, Medium 2\u00d7 and Low 1\u00d7 toward the weekly bar. A task with parts splits its weight across them. Scorecard percentages stay as plain task counts.</dd>'+
     '<dt>Never marked</dt><dd>Anything left unmarked after its checkpoint counts as missed. Silence isn\u2019t neutral.</dd>'+
     '<dt>Categories</dt><dd>Health items are verified against Apple Health, Money items against statements, and Habits run on your word.</dd>'+
     '<dt>Filters</dt><dd>The date range and category at the top apply to Home, Calendar and Scorecard. Tap a chart to drill in.</dd>'+
@@ -1136,7 +1125,7 @@ app.addEventListener('click',function(ev){
     return;
   }
   if(t.hasAttribute('data-logout')){api('DELETE','/api/login').then(function(){state=null;renderLogin('');});return;}
-  if(t.hasAttribute('data-add')){editErr='';editing={id:'c'+Date.now().toString(36),title:'',tier:'word',slot:'morning',freq:'daily',priority:'medium',day:null,amount:'',since:k,isNew:true};render();return;}
+  if(t.hasAttribute('data-add')){editErr='';editing={id:'c'+Date.now().toString(36),title:'',tier:'word',slot:'morning',freq:'daily',day:null,amount:'',since:k,isNew:true};render();return;}
   if(t.dataset.edit){goEdit(t.dataset.edit);return;}
   if(t.hasAttribute('data-cancel')){editing=null;render();return;}
   if(t.hasAttribute('data-delete')){
@@ -1148,7 +1137,7 @@ app.addEventListener('click',function(ev){
     if(!String(editing.title).trim()){editErr='Give it a name.';render();return;}
     if(editing.freq==='once'&&!editing.date){editErr='Pick a date for a one-time item.';render();return;}
     if(editing.freq==='monthly'&&editing.day!=null&&(editing.day<1||editing.day>31)){editErr='Due day has to be between 1 and 31.';render();return;}
-    var obj={id:editing.id,title:editing.title.trim(),tier:editing.tier,slot:editing.slot,freq:editing.freq,priority:prioOf(editing),since:editing.since||k};
+    var obj={id:editing.id,title:editing.title.trim(),tier:editing.tier,slot:editing.slot,freq:editing.freq,since:editing.since||k};
     if(obj.freq==='monthly'){obj.day=editing.day||null;obj.amount=(editing.amount||'').trim();}
     if(obj.freq==='once'){obj.date=editing.date;obj.amount=(editing.amount||'').trim();}
     if(editing.parts&&editing.parts.length)obj.parts=editing.parts;
