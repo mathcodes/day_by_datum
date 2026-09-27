@@ -1,8 +1,26 @@
 {
   "name": "day_by_datum",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "Three daily checkpoints, email check-ins, and a record Claude can read.",
-  "engines": { "node": ">=20" }
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "dev": "vercel dev",
+    "link": "vercel link",
+    "env:dev": "vercel env pull .env.local --environment=development",
+    "env:preview": "vercel env pull .env.preview.local --environment=preview",
+    "env:prod": "vercel env pull .env.production.local --environment=production",
+    "check": "node scripts/check.mjs",
+    "test": "node tests/run-all.mjs",
+    "verify": "npm run check && npm test",
+    "cron:local": "node scripts/ping-cron.mjs http://localhost:3000",
+    "cron:prod": "node scripts/ping-cron.mjs https://day-by-datum.vercel.app",
+    "deploy:preview": "vercel deploy",
+    "deploy:prod": "vercel deploy --prod",
+    "logs": "vercel logs day-by-datum.vercel.app"
+  },
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  }
 }

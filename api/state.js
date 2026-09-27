@@ -10,7 +10,9 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       if (!isOwner(req) && !isReader(req)) return res.status(401).json({ error: 'Sign in first.' });
       const state = await getState();
-      const body = { now: localNow(state.settings.tz), state };
+      // View-only readers never get linked-calendar addresses: they work like passwords.
+      const safe = isOwner(req) ? state : { ...state, feeds: (state.feeds || []).map(({ url, skip, ...f }) => f) };
+      const body = { now: localNow(state.settings.tz), state: safe };
       // The owner's dashboard gets the read-only token so it can build a view-only link.
       if (isOwner(req) && process.env.READ_TOKEN) body.readToken = process.env.READ_TOKEN;
       return res.json(body);
