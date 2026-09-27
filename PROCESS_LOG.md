@@ -202,7 +202,7 @@ cd ~/Desktop/day_by_datum && git add . && git commit -m "Redesign, onboarding te
 
 ## Release 7: Linked calendars (Google and Outlook)
 
-**Deployed:** In progress.
+**Deployed:** Sat Sep 26, 9:58 PM ET · commit `fe3a3b1` ("Link Google and Outlook calendars"). The process log itself followed at 9:59 PM ET, commit `b946b05`.
 
 **Contents:**
 - Google Calendar and Outlook buttons with brand icons on the Calendar and Commitments pages.
@@ -223,6 +223,47 @@ cd ~/Desktop/day_by_datum && git add . && git commit -m "Link Google and Outlook
 **Close the deal:**
 - [ ] Link a real calendar. For Google: Settings and sharing, then Integrate calendar, then copy the **Secret address in iCal format**.
 - [ ] Watch for the first automatic checkpoint email at **9:00 AM ET**, and answer it.
+
+---
+
+## Release 8: Pin Node version
+
+**Why:** Vercel warned that `"node": ">=20"` in `package.json` would automatically jump to the next major Node version when one is released. The project runs on Node 24, so the version is now pinned to `"24.x"`. This is a one-line change with no app changes.
+
+**Ship it:**
+
+```bash
+cd ~/Desktop/day_by_datum
+sed -i '' 's/"node": ">=20"/"node": "24.x"/' package.json
+cp ~/Downloads/PROCESS_LOG.md .
+git add package.json PROCESS_LOG.md && git commit -m "Pin Node 24" && git push
+```
+
+**Close the deal:**
+- [ ] The next build log no longer shows the "engines" warning.
+
+---
+
+## Release 9: Atmosphere (glass cards, glow, contour lines)
+
+**Contents:**
+- A faint colored glow behind the app: mint top-left, violet top-right, sky at the bottom.
+- Barely-there topographic contour lines, a nod to "datum", the reference point in surveying.
+- Glass cards: slightly see-through with a blur, a soft top sheen and a lighter top rim. The sidebar, dialogs and bottom bars match.
+
+All of it is drawn in CSS with no image downloads. Blur is lighter on phones, and everything switches off for reduced-transparency settings, browsers without blur support, and printing. This zip also includes the Release 8 Node pin, so pushing this covers both.
+
+**Ship it:**
+
+```bash
+rm -rf ~/Downloads/day_by_datum
+cd ~/Downloads && unzip -o "day_by_datum (8).zip"
+cp -R ~/Downloads/day_by_datum/. ~/Desktop/day_by_datum/
+cd ~/Desktop/day_by_datum && git add . && git commit -m "Glass cards, glow, contour lines" && git push
+```
+
+**Close the deal:**
+- [ ] Look at it on your phone in daylight and at night. If the lines or glow feel like too much or too little, say so. Intensity is set by a few numbers.
 
 ---
 
