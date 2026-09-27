@@ -218,10 +218,22 @@ input.need{border-color:var(--miss)}
 .notice.ro{margin:0 0 18px}
 
 /* ---------- Weekly progress ---------- */
-:root{--g-health:#1F8A94;--g-money:#3A5BD9;--g-habits:#8A4FD1}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0}}
-:root[data-theme="dark"]{--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0}
+:root{--g-health:#1F8A94;--g-money:#3A5BD9;--g-habits:#8A4FD1;--g-events:#C8660F}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0;--g-events:#F0954A}}
+:root[data-theme="dark"]{--g-health:#3CB7C2;--g-money:#6C8CF5;--g-habits:#B184F0;--g-events:#F0954A}
 .wk{margin-bottom:16px}
+.add-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.add-row .btn{flex:1}
+.seg-ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg-ctl button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;font:inherit;font-weight:700;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.seg-ctl button span{font-weight:400;font-size:.8rem;color:var(--muted)}
+.seg-ctl button[aria-checked="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.qual{border:1px solid var(--line);border-radius:10px;padding:10px 14px 14px;margin:0;display:grid;gap:4px}
+.qual legend{font-weight:700;font-size:.9rem;padding:0 4px}
+.qual-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;cursor:pointer}
+.qual-row input{width:20px;height:20px;min-height:0;padding:0;margin:0;accent-color:var(--ink)}
+.qual-pts{font-size:.8rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.qual-sug{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg);border-radius:8px;padding:8px 10px;margin:6px 0 4px}
+.chip-event{background:var(--g-events);color:#fff}
 .prio{display:inline-block;font-size:.72rem;font-weight:700;padding:0 6px;border-radius:4px;border:1px solid currentColor;line-height:1.4;vertical-align:1px}
 .prio-high{color:var(--ink)}.prio-medium{color:var(--muted)}.prio-low{color:var(--muted);border-style:dashed}
 .wk-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px}
@@ -377,15 +389,29 @@ var collapsed=false; try{collapsed=localStorage.getItem('dbd-collapsed')==='1';}
 
 var SLOTS=['morning','midday','evening'];
 var SLOT_NAME={morning:'Morning',midday:'Midday',evening:'Evening'};
-var TIER={device:'Claude checks Apple Health',paper:'Claude checks statements',word:'On your word'};
+var TIER={device:'Claude checks Apple Health',paper:'Claude checks statements',word:'On your word',event:'Event'};
 var TIER_OPT={device:'Apple Health (Claude checks)',paper:'Statement or receipt (Claude checks)',word:'Your word only'};
-var CAT={device:'Health',paper:'Money',word:'Habits'};
-var CAT_KEYS=['device','paper','word'];
+var CAT={device:'Health',paper:'Money',word:'Habits',event:'Events'};
+var CAT_KEYS=['device','paper','word','event'];
 var FREQ_OPT={daily:'Every day',weekdays:'Weekdays',monthly:'Monthly',once:'One time'};
 var NEEDS_WHY={missed:1,bypassed:1};
 var STATUS_LBL={done:'Done',missed:'Missed',bypassed:'Bypassed'};
 var TITLES={home:'Home',today:'Today',cal:'Calendar',score:'Scorecard',progress:'Progress history',commitments:'Commitments'};
-var CAT_VAR={device:'--g-health',paper:'--g-money',word:'--g-habits'};
+var CAT_VAR={device:'--g-health',paper:'--g-money',word:'--g-habits',event:'--g-events'};
+var QUALS=[
+  {id:'people',label:'Other people are counting on it',hint:'plans, bandmates, family, a client',pts:2},
+  {id:'money',label:'Missing it costs money',hint:'late fee, lost ticket, penalty',pts:2},
+  {id:'health',label:'It\u2019s for my health',pts:1},
+  {id:'fixed',label:'It has a fixed time or hard deadline',pts:1},
+  {id:'goal',label:'It moves a bigger goal forward',pts:1}];
+function suggestPrio(q){
+  q=q||[];var score=0,why=[];
+  QUALS.forEach(function(x){if(q.indexOf(x.id)>-1){score+=x.pts;why.push(x.label.toLowerCase());}});
+  return {p:score>=3?'high':score>=1?'medium':'low',score:score,why:why};
+}
+function slotFor(t){var m=toMins(t),cps=state.settings.checkpoints;return SLOTS.filter(function(s){return toMins(cps[s])>=m;})[0]||'evening';}
+function isEvent(c){return c.kind==='event';}
+function eventMeta(c){return [c.time?fmt12(c.time):'',c.where?esc(c.where):'',c.who?'with '+esc(c.who):''].filter(Boolean).join(', ');}
 var PRIO={high:{w:4,label:'High'},medium:{w:2,label:'Medium'},low:{w:1,label:'Low'}};
 var PRIO_OPT={high:'High (counts 4\u00d7)',medium:'Medium (counts 2\u00d7)',low:'Low (counts 1\u00d7)'};
 function prioOf(c){return PRIO[c.priority]?c.priority:'medium';}
@@ -615,7 +641,7 @@ function attentionCard(n){
   });
   soon.forEach(function(x){
     h+='<li><span class="dotcol" style="background:var(--amber)"></span><div class="grow"><b>'+esc(x.c.title)+'</b>'+(x.c.amount?' <span class="muted">'+esc(x.c.amount)+'</span>':'')+
-      '<div class="muted small">'+(x.i===0?'Due today':'Due '+fmtDate(x.k))+'</div></div><button class="btn btn-sm" data-openday="'+x.k+'">View</button></li>';
+      '<div class="muted small">'+(isEvent(x.c)?(x.i===0?'Today, ':fmtDate(x.k)+', ')+eventMeta(x.c):(x.i===0?'Due today':'Due '+fmtDate(x.k)))+'</div></div><button class="btn btn-sm" data-openday="'+x.k+'">View</button></li>';
   });
   undated.forEach(function(c){
     h+='<li><span class="dotcol" style="background:var(--muted)"></span><div class="grow"><b>'+esc(c.title)+'</b><div class="muted small">No due date set, so it never comes up</div></div>'+
@@ -811,7 +837,7 @@ function viewToday(){
   if(notes.length)h+='<div class="notice">'+notes.map(function(x){return '<p>'+x+'</p>';}).join('')+'</div>';
   function row(u){
     var e=entry(k,u.key),s2=e&&e.s,lt=isLate(u),c=u.c;
-    var meta=u.sub?'':(prioOf(c)==='high'?'<span class="prio prio-high">High</span> ':'')+TIER[c.tier]+(c.amount?', '+esc(c.amount):'');
+    var meta=u.sub?'':(prioOf(c)==='high'?'<span class="prio prio-high">High</span> ':'')+(isEvent(c)?'Event, '+eventMeta(c):TIER[c.tier])+(c.amount?', '+esc(c.amount):'');
     var stamp=e&&e.at?'marked '+fmt12(e.at)+(e.via==='email'?' by email':''):'';
     var metaLine=[meta,lt?'<span class="late-tag">Overdue</span>':'',stamp].filter(Boolean).join(' \u2022 ');
     var btn=function(act,label,cls){return '<button class="btn '+cls+'" data-act="'+act+'" data-id="'+u.key+'" aria-pressed="'+(s2===act)+'">'+label+'</button>';};
@@ -851,7 +877,7 @@ function dayDetail(k2){
     su.forEach(function(u){
       var e=entry(k2,u.key),stt=e&&e.s;
       var tag=stt?tagHTML(stt):(isPast(k2,u,n)?tagHTML('silent'):'');
-      h+='<li class="crow"><div><span class="item-title">'+esc(fullTitle(u))+'</span><span class="item-meta">'+CAT[u.c.tier]+'. '+(isSpecial(u.c)?freqText(u.c)+(u.c.amount?', '+esc(u.c.amount):''):FREQ_OPT[u.c.freq])+
+      h+='<li class="crow"><div><span class="item-title">'+esc(fullTitle(u))+'</span><span class="item-meta">'+CAT[u.c.tier]+'. '+(isEvent(u.c)?'Event, '+eventMeta(u.c):isSpecial(u.c)?freqText(u.c)+(u.c.amount?', '+esc(u.c.amount):''):FREQ_OPT[u.c.freq])+
         (e&&e.why?'. \u201c'+esc(e.why)+'\u201d':'')+'</span></div>'+tag+'</li>';
     });
     h+='</ul>';
@@ -880,11 +906,11 @@ function viewCal(){
     if(k<=today){var sc=dayScore(k,n);if(sc&&sc.counted){var r=sc.done/sc.counted;dot=r>=1?'full':(r>=.7?'part':'low');}}
     var cls='cal-cell'+(k===today?' today':'')+(k===calSel?' sel':'')+(k<today?' past':'');
     h+='<button class="'+cls+'" data-day="'+k+'" aria-label="'+fmtDate(k,true)+'"><span class="cal-top"><b>'+d+'</b>'+(dot?'<i class="dot '+dot+'"></i>':'')+'</span>'+
-      special.slice(0,2).map(function(c){return '<span class="chip chip-'+c.freq+'">'+esc(c.title)+'</span>';}).join('')+
+      special.slice(0,2).map(function(c){return '<span class="chip chip-'+(isEvent(c)?'event':c.freq)+'">'+(isEvent(c)&&c.time?fmt12(c.time).replace(':00','')+' ':'')+esc(c.title)+'</span>';}).join('')+
       (special.length>2?'<span class="chip-more">+'+(special.length-2)+' more</span>':'')+
       (routine?'<span class="routine">'+routine+' routine</span>':'')+'</button>';
   }
-  h+='</div></div><div class="legend"><span><i style="background:var(--amber)"></i>Monthly</span><span><i style="background:var(--ink)"></i>One time</span><span>Dots show how that day went</span></div>';
+  h+='</div></div><div class="legend"><span><i style="background:var(--amber)"></i>Monthly</span><span><i style="background:var(--ink)"></i>One time</span><span><i style="background:var(--g-events)"></i>Event</span><span>Dots show how that day went</span></div>';
   h+='<h2 class="sec" id="cal-detail">'+fmtDate(calSel,true)+'</h2>'+dayDetail(calSel);
   return h;
 }
@@ -912,32 +938,63 @@ function viewScore(){
 }
 
 /* ---------- Commitments ---------- */
+function qualHTML(e){
+  var sg=suggestPrio(e.q),cur=prioOf(e);
+  var h='<fieldset class="qual"><legend>What makes this matter?</legend>'+QUALS.map(function(x){
+    var on=(e.q||[]).indexOf(x.id)>-1;
+    return '<label class="qual-row"><input type="checkbox" data-q="'+x.id+'"'+(on?' checked':'')+'><span><b>'+x.label+'</b>'+(x.hint?'<span class="muted small"> '+x.hint+'</span>':'')+'</span><span class="qual-pts">+'+x.pts+'</span></label>';}).join('');
+  h+='<div class="qual-sug"><span>Suggested: <span class="prio prio-'+sg.p+'">'+PRIO[sg.p].label+'</span> <span class="muted small">'+(sg.why.length?'because '+sg.why.join(', '):'nothing checked, so it\u2019s nice to have')+'</span></span>'+
+    (e.priorityManual&&cur!==sg.p?'<button class="link" data-usesug>Use suggestion</button>':'')+'</div>';
+  h+='<label class="field"><span>Priority'+(e.priorityManual&&cur!==sg.p?' (your override)':'')+'</span><select data-f="priority">'+
+    Object.keys(PRIO_OPT).map(function(k){return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+PRIO_OPT[k]+'</option>';}).join('')+'</select></label></fieldset>';
+  return h;
+}
 function formHTML(){
-  var e=editing;
+  var e=editing,ev=e.kind==='event';
   function opts(map,val){return Object.keys(map).map(function(k){return '<option value="'+k+'"'+(k===val?' selected':'')+'>'+map[k]+'</option>';}).join('');}
-  return '<div class="form" id="form"><h2 class="sec">'+(e.isNew?'New commitment':'Edit commitment')+'</h2>'+
-    '<label class="field"><span>What</span><input data-f="title" value="'+esc(e.title)+'" placeholder="e.g. 30 exercise minutes"></label>'+
-    '<div class="row2"><label class="field"><span>Checkpoint</span><select data-f="slot">'+opts(SLOT_NAME,e.slot)+'</select></label>'+
-    '<label class="field"><span>How often</span><select data-f="freq">'+opts(FREQ_OPT,e.freq)+'</select></label></div>'+
-    '<div class="row2"><label class="field"><span>Category and how it\u2019s verified</span><select data-f="tier">'+opts(TIER_OPT,e.tier)+'</select></label>'+
-    '<label class="field"><span>Priority</span><select data-f="priority">'+opts(PRIO_OPT,prioOf(e))+'</select></label></div>'+
-    '<label class="field"><span>Parts (optional, one per line)</span><textarea data-f="partsText" rows="3" placeholder="e.g.\nI walked\nDog walked">'+esc((e.parts||[]).map(function(p){return p.title;}).join('\n'))+'</textarea>'+
-    '<span class="item-meta">Each part gets its own Done, Missed and Bypass buttons.</span></label>'+
-    (e.freq==='once'?'<div class="row2"><label class="field"><span>Date</span><input data-f="date" type="date" value="'+esc(e.date||'')+'"></label>'+
-      '<label class="field"><span>Amount (optional)</span><input data-f="amount" value="'+esc(e.amount||'')+'" placeholder="$0.00"></label></div>':'')+
-    (e.freq==='monthly'?'<div class="row2"><label class="field"><span>Due day of month</span><input data-f="day" type="number" min="1" max="31" inputmode="numeric" value="'+(e.day||'')+'"></label>'+
-      '<label class="field"><span>Amount</span><input data-f="amount" value="'+esc(e.amount||'')+'" placeholder="$0.00"></label></div>':'')+
-    (editErr?'<p class="error-line">'+esc(editErr)+'</p>':'')+
+  var h='<div class="form" id="form"><h2 class="sec">'+(e.isNew?(ev?'New event':'New commitment'):(ev?'Edit event':'Edit commitment'))+'</h2>';
+  if(e.isNew)h+='<div class="seg-ctl" role="radiogroup" aria-label="Type"><button role="radio" aria-checked="'+!ev+'" data-kind="commitment">Commitment<span>Recurring or one-off task</span></button>'+
+    '<button role="radio" aria-checked="'+ev+'" data-kind="event">Event<span>Concert, gig, dinner, appointment</span></button></div>';
+  h+='<label class="field"><span>'+(ev?'Event':'What')+'</span><input data-f="title" value="'+esc(e.title)+'" placeholder="'+(ev?'e.g. Khruangbin at the Ritz':'e.g. 30 exercise minutes')+'"></label>';
+  if(ev){
+    h+='<div class="row2"><label class="field"><span>Date</span><input data-f="date" type="date" value="'+esc(e.date||'')+'"></label>'+
+      '<label class="field"><span>Start time</span><input data-f="time" type="time" value="'+esc(e.time||'')+'"></label></div>'+
+      '<div class="row2"><label class="field"><span>Where (optional)</span><input data-f="where" value="'+esc(e.where||'')+'" placeholder="Venue or address"></label>'+
+      '<label class="field"><span>With (optional)</span><input data-f="who" value="'+esc(e.who||'')+'" placeholder="Who\u2019s counting on you"></label></div>'+
+      '<label class="field"><span>Cost (optional)</span><input data-f="amount" value="'+esc(e.amount||'')+'" placeholder="$0.00"></label>';
+  }else{
+    h+='<div class="row2"><label class="field"><span>Checkpoint</span><select data-f="slot">'+opts(SLOT_NAME,e.slot)+'</select></label>'+
+      '<label class="field"><span>How often</span><select data-f="freq">'+opts(FREQ_OPT,e.freq)+'</select></label></div>'+
+      '<label class="field"><span>Category and how it\u2019s verified</span><select data-f="tier">'+opts(TIER_OPT,e.tier)+'</select></label>'+
+      '<label class="field"><span>Parts (optional, one per line)</span><textarea data-f="partsText" rows="3" placeholder="e.g.\nI walked\nDog walked">'+esc((e.parts||[]).map(function(p){return p.title;}).join('\n'))+'</textarea>'+
+      '<span class="item-meta">Each part gets its own Done, Missed and Bypass buttons.</span></label>'+
+      (e.freq==='once'?'<div class="row2"><label class="field"><span>Date</span><input data-f="date" type="date" value="'+esc(e.date||'')+'"></label>'+
+        '<label class="field"><span>Amount (optional)</span><input data-f="amount" value="'+esc(e.amount||'')+'" placeholder="$0.00"></label></div>':'')+
+      (e.freq==='monthly'?'<div class="row2"><label class="field"><span>Due day of month</span><input data-f="day" type="number" min="1" max="31" inputmode="numeric" value="'+(e.day||'')+'"></label>'+
+        '<label class="field"><span>Amount</span><input data-f="amount" value="'+esc(e.amount||'')+'" placeholder="$0.00"></label></div>':'');
+  }
+  h+=qualHTML(e);
+  h+=(editErr?'<p class="error-line">'+esc(editErr)+'</p>':'')+
     '<div class="form-actions"><button class="btn b-primary" data-apply>'+(e.isNew?'Add':'Update')+'</button><button class="btn" data-cancel>Cancel</button>'+
     (e.isNew?'':'<button class="btn b-danger" data-delete>'+(e.confirmDelete?'Tap again to delete':'Delete')+'</button>')+'</div></div>';
+  return h;
 }
 function viewCommit(){
   var cps=state.settings.checkpoints;
   var h='<h2 class="sec">Checkpoint times</h2><div class="cps">'+SLOTS.map(function(s){
     return '<label class="field"><span>'+SLOT_NAME[s]+'</span><input type="time" data-cp="'+s+'" value="'+cps[s]+'"></label>';}).join('')+'</div>';
-  h+=editing?formHTML():'<button class="btn btn-wide" data-add>Add a commitment</button>';
+  h+=editing?formHTML():'<div class="add-row"><button class="btn b-primary" data-add="commitment">Add a commitment</button><button class="btn" data-add="event">Add an event</button></div>';
+  var today=now().key;
+  var evs=state.commitments.filter(isEvent).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1;});
+  var up=evs.filter(function(c){return c.date>=today;}),past=evs.length-up.length;
+  if(evs.length){
+    h+='<h2 class="sec">Upcoming events</h2>'+(up.length?'<ul class="clist">'+up.map(function(c){
+      return '<li class="crow"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta"><span class="prio prio-'+prioOf(c)+'">'+PRIO[prioOf(c)].label+'</span> '+fmtDate(c.date)+', '+eventMeta(c)+'</span></div>'+
+        '<button class="btn" data-edit="'+c.id+'">Edit</button></li>';}).join('')+'</ul>':'<p class="muted">None coming up.</p>')+
+      (past?'<p class="muted small">'+past+' past event'+(past===1?'':'s')+' stay on your calendar and record.</p>':'');
+  }
   SLOTS.forEach(function(s){
-    var list=state.commitments.filter(function(c){return c.slot===s;});
+    var list=state.commitments.filter(function(c){return c.slot===s&&!isEvent(c);});
     if(!list.length)return;
     h+='<h2 class="sec">'+SLOT_NAME[s]+', by '+fmt12(cps[s])+'</h2><ul class="clist">'+list.map(function(c){
       return '<li class="crow"><div><span class="item-title">'+esc(c.title)+'</span><span class="item-meta"><span class="prio prio-'+prioOf(c)+'">'+PRIO[prioOf(c)].label+'</span> '+CAT[c.tier]+'. '+freqText(c)+(c.amount?', '+esc(c.amount):'')+(c.parts&&c.parts.length?'. '+c.parts.length+' parts':'')+'</span></div>'+
@@ -958,6 +1015,8 @@ function modalHTML(){
   if(modal.type==='help'){t='How this works';b='<dl class="help">'+
     '<dt>Done, Missed, Bypass</dt><dd>Done counts for you. Missed counts against you and needs a reason. Bypass is for things that genuinely don\u2019t apply that day. It needs a reason too, doesn\u2019t affect your score, and stays on your record.</dd>'+
     '<dt>Priority</dt><dd>High counts 4\u00d7, Medium 2\u00d7 and Low 1\u00d7 toward the weekly bar. A task with parts splits its weight across them. Scorecard percentages stay as plain task counts.</dd>'+
+    '<dt>Priority qualifier</dt><dd>When you add something, check what makes it matter. Other people and money count +2 each, and health, fixed times and bigger goals count +1. A score of 3 or more suggests High, 1 to 2 suggests Medium, and 0 suggests Low. You can override it.</dd>'+
+    '<dt>Events</dt><dd>Concerts, gigs, dinners and appointments. They show up at the checkpoint right after they start, and they count in the Events color on your weekly bar.</dd>'+
     '<dt>Never marked</dt><dd>Anything left unmarked after its checkpoint counts as missed. Silence isn\u2019t neutral.</dd>'+
     '<dt>Categories</dt><dd>Health items are verified against Apple Health, Money items against statements, and Habits run on your word.</dd>'+
     '<dt>Filters</dt><dd>The date range and category at the top apply to Home, Calendar and Scorecard. Tap a chart to drill in.</dd>'+
@@ -1066,13 +1125,19 @@ function render(){
 }
 function readForm(){
   var f=document.getElementById('form');if(!f)return;
+  editing.q=[].slice.call(f.querySelectorAll('[data-q]')).filter(function(x){return x.checked;}).map(function(x){return x.dataset.q;});
   f.querySelectorAll('[data-f]').forEach(function(el){var key=el.getAttribute('data-f'),v=el.value;
     if(key==='day'){var num=parseInt(v,10);editing.day=isNaN(num)?null:num;}
     else if(key==='partsText'){var old=editing.parts||[];editing.parts=v.split('\n').map(function(x){return x.trim();}).filter(Boolean).map(function(t){
       var hit=old.filter(function(p){return p.title===t;})[0];return hit||{id:'p'+Math.random().toString(36).slice(2,7),title:t};});}
     else editing[key]=v;});
 }
-function goEdit(id){var c=state.commitments.filter(function(x){return x.id===id;})[0];if(!c)return;tab='commitments';editErr='';editing=JSON.parse(JSON.stringify(c));query='';modal=null;navOpen=false;render();window.scrollTo(0,0);}
+function newItem(kind,k){
+  var ev=kind==='event',q=ev?['people','fixed']:[];
+  return {id:'c'+Date.now().toString(36),kind:ev?'event':undefined,title:'',tier:ev?'event':'word',slot:'evening',freq:ev?'once':'daily',
+    q:q,priority:suggestPrio(q).p,priorityManual:false,day:null,date:'',time:'',where:'',who:'',amount:'',since:k,isNew:true};
+}
+function goEdit(id){var c=state.commitments.filter(function(x){return x.id===id;})[0];if(!c)return;tab='commitments';editErr='';editing=JSON.parse(JSON.stringify(c));if(editing.priorityManual===undefined)editing.priorityManual=prioOf(editing)!==suggestPrio(editing.q).p;query='';modal=null;navOpen=false;render();window.scrollTo(0,0);}
 
 /* ---------- Events ---------- */
 app.addEventListener('click',function(ev){
@@ -1136,7 +1201,9 @@ app.addEventListener('click',function(ev){
     return;
   }
   if(t.hasAttribute('data-logout')){api('DELETE','/api/login').then(function(){state=null;renderLogin('');});return;}
-  if(t.hasAttribute('data-add')){editErr='';editing={id:'c'+Date.now().toString(36),title:'',tier:'word',slot:'morning',freq:'daily',priority:'medium',day:null,amount:'',since:k,isNew:true};render();return;}
+  if(t.hasAttribute('data-add')){editErr='';editing=newItem(t.dataset.add==='event'?'event':'commitment',k);render();return;}
+  if(t.dataset.kind){readForm();var keep={title:editing.title};editing=newItem(t.dataset.kind,k);editing.title=keep.title;render();return;}
+  if(t.hasAttribute('data-usesug')){readForm();editing.priority=suggestPrio(editing.q).p;editing.priorityManual=false;render();return;}
   if(t.dataset.edit){goEdit(t.dataset.edit);return;}
   if(t.hasAttribute('data-cancel')){editing=null;render();return;}
   if(t.hasAttribute('data-delete')){
@@ -1146,12 +1213,17 @@ app.addEventListener('click',function(ev){
   if(t.hasAttribute('data-apply')){
     readForm();
     if(!String(editing.title).trim()){editErr='Give it a name.';render();return;}
+    if(editing.kind==='event'&&(!editing.date||!editing.time)){editErr='An event needs a date and a start time.';render();return;}
     if(editing.freq==='once'&&!editing.date){editErr='Pick a date for a one-time item.';render();return;}
     if(editing.freq==='monthly'&&editing.day!=null&&(editing.day<1||editing.day>31)){editErr='Due day has to be between 1 and 31.';render();return;}
     var obj={id:editing.id,title:editing.title.trim(),tier:editing.tier,slot:editing.slot,freq:editing.freq,priority:prioOf(editing),since:editing.since||k};
     if(obj.freq==='monthly'){obj.day=editing.day||null;obj.amount=(editing.amount||'').trim();}
     if(obj.freq==='once'){obj.date=editing.date;obj.amount=(editing.amount||'').trim();}
-    if(editing.parts&&editing.parts.length)obj.parts=editing.parts;
+    if(editing.parts&&editing.parts.length&&editing.kind!=='event')obj.parts=editing.parts;
+    if(editing.q&&editing.q.length)obj.q=editing.q;
+    if(editing.priorityManual)obj.priorityManual=true;
+    if(editing.kind==='event'){obj.kind='event';obj.tier='event';obj.freq='once';obj.date=editing.date;obj.time=editing.time;obj.slot=slotFor(editing.time);
+      obj.where=(editing.where||'').trim();obj.who=(editing.who||'').trim();obj.amount=(editing.amount||'').trim();}
     var idx=state.commitments.map(function(x){return x.id;}).indexOf(obj.id);
     if(idx>-1)state.commitments[idx]=obj;else state.commitments.push(obj);
     editing=null;editErr='';dirty=true;render();return;
@@ -1171,6 +1243,8 @@ app.addEventListener('change',function(ev){
   if(el.hasAttribute('data-selall')){var n=now(),cps=state.settings.checkpoints;
     unitsOn(n.key).filter(catOk).filter(function(u){return !entry(n.key,u.key)&&toMins(cps[u.c.slot])<=n.mins;}).forEach(function(u){selected[u.key]=el.checked;});render();return;}
   if(el.dataset.cp&&el.value){state.settings.checkpoints[el.dataset.cp]=el.value;dirty=true;render();}
+  if(el.dataset.q){readForm();if(!editing.priorityManual)editing.priority=suggestPrio(editing.q).p;render();return;}
+  if(el.dataset.f==='priority'){readForm();editing.priorityManual=editing.priority!==suggestPrio(editing.q).p;render();return;}
   if(el.dataset.f==='freq'||el.dataset.f==='tier'){readForm();render();}
 });
 document.addEventListener('keydown',function(ev){

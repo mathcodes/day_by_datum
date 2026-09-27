@@ -267,6 +267,33 @@ cd ~/Desktop/day_by_datum && git add . && git commit -m "Glass cards, glow, cont
 
 ---
 
+## Release 10: Dev tooling, tests in the repo, CI
+
+**Contents:**
+- `package.json` scripts for local development, pulling each environment's settings, syntax checks, the test suite, manual cron runs, deploys, and logs.
+- The 147-check test suite moved into `tests/`, run with `npm test`.
+- A **Checks and tests** GitHub workflow that runs on every push.
+- The local-development and environments guide in the README.
+
+All of it was verified from a clean copy of the repo: fresh `npm install`, then `npm run verify`, with 147 of 147 passing. A planted failing test, a syntax error and a missing secret each exit with an error, so the workflow fails when it should.
+
+**Ship it:**
+
+```bash
+rm -rf ~/Downloads/day_by_datum
+cd ~/Downloads && unzip -o "day_by_datum (9).zip"
+cp -R ~/Downloads/day_by_datum/. ~/Desktop/day_by_datum/
+cd ~/Desktop/day_by_datum && npm install && npm run verify
+git add . && git commit -m "Dev tooling, tests, CI" && git push
+```
+
+**Close the deal:**
+- [ ] The **Checks and tests** workflow shows a green check in the repo's Actions tab.
+- [ ] Optional: complete the local-development setup in the README and run `npm run dev`.
+- [ ] Optional: create a separate Upstash database for Preview and Development.
+
+---
+
 ## Open items
 
 - [ ] Set due days on **Chase Amazon Visa**, **Buzzy loan** and **Rent** if they aren't set yet.
