@@ -29,6 +29,7 @@ export default async function handler(req, res) {
     }
     return res.status(405).json({ error: 'Use GET or PUT.' });
   } catch (e) {
+    console.error('/api/state failed:', e);
     return res.status(500).json({ error: e.message });
   }
 }
